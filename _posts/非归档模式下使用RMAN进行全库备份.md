@@ -1,0 +1,261 @@
+---
+title: 非归档模式下使用RMAN进行全库备份
+description:  
+categories:
+ - oracle
+tags:
+---
+
+#### 1.前提：查看数据库归档状态
+
+```
+ archive log list;
+```
+![](https://img2020.cnblogs.com/blog/1926496/202012/1926496-20201201105513436-1987236462.png)
+#### 1 切换到root用户在“/”根目录下建立full目录。
+
+```
+mkdir /full
+```
+
+#### 2 把/full目录所属权赋予给oracle用户和oinstall组
+
+```
+chown -R oracle:oinstall /full
+```
+
+#### 3 切换回oracle用户 并在/full目录下建立arch目录（注 arch目录留着备用）
+
+```
+su - oracle
+mkdir -p /full/arch
+```
+
+### RMAN备份正式开始
+
+​	使用rman target / 进入到rman中。
+
+#### 1 查看当前数据库状态
+```
+RMAN> select status from v$instance;
+```
+![](https://img2020.cnblogs.com/blog/1926496/202012/1926496-20201201110050651-1219237784.png)
+非归档模式下，不能在数据库open的状态下进行全库备份！
+
+#### 2 关闭数据库
+
+```
+RMAN> shutdown immediate
+
+database closed
+database dismounted
+Oracle instance shut down
+```
+
+#### 4 将数据库启动到mount状态
+
+```
+RMAN> startup mount
+
+connected to target database (not started)
+Oracle instance started
+database mounted
+
+Total System Global Area     838860800 bytes
+
+Fixed Size                     8626240 bytes
+Variable Size                322965440 bytes
+Database Buffers             503316480 bytes
+Redo Buffers                   3952640 bytes
+```
+
+#### 5 执行backup database; 全库备份
+
+```
+RMAN> backup database;
+
+Starting backup at 2020-11-06 04:07:44
+allocated channel: ORA_DISK_1
+channel ORA_DISK_1: SID=35 device type=DISK
+channel ORA_DISK_1: starting full datafile backup set
+channel ORA_DISK_1: specifying datafile(s) in backup set
+input datafile file number=00001 name=/u01/app/oracle/oradata/orcl/system01.dbf
+input datafile file number=00003 name=/u01/app/oracle/oradata/orcl/sysaux01.dbf
+input datafile file number=00004 name=/u01/app/oracle/oradata/orcl/undotbs01.dbf
+input datafile file number=00007 name=/u01/app/oracle/oradata/orcl/users01.dbf
+channel ORA_DISK_1: starting piece 1 at 2020-11-06 04:07:44
+channel ORA_DISK_1: finished piece 1 at 2020-11-06 04:07:59
+piece handle=/u01/app/oracle/product/12.2.0/db_1/dbs/03veqgkg_1_1 tag=TAG20201106T040744 comment=NONE
+channel ORA_DISK_1: backup set complete, elapsed time: 00:00:15
+Finished backup at 2020-11-06 04:07:59
+
+Starting Control File and SPFILE Autobackup at 2020-11-06 04:07:59
+piece handle=/u01/app/oracle/product/12.2.0/db_1/dbs/c-1577685671-20201106-01 comment=NONE
+Finished Control File and SPFILE Autobackup at 2020-11-06 04:08:00
+
+
+全库备份完成，而且我们能从最后一段提示可以看出控制文件与SPFILE文件（Starting Control File and SPFILE Autobackup at）也进行了自动备份，并成功完成了这两个文件的备份。存储到了“/u01/app/oracle/product/12.2.0/db_1/dbs/c-1577685671-20201106-01”这个文件中。
+```
+
+也可指定备份路径：
+
+```
+backup format '/full/full_%d_%s_%T_%p.bak database;
+```
+
+#### 7 使用list backup;命令查看一下该备份结果
+
+```
+BS Key  Type LV Size       Device Type Elapsed Time Completion Time    
+------- ---- -- ---------- ----------- ------------ -------------------
+3       Full    1.07G      DISK        00:00:07     2020-11-06 04:07:51
+        BP Key: 3   Status: AVAILABLE  Compressed: NO  Tag: TAG20201106T040744
+        Piece Name: /u01/app/oracle/product/12.2.0/db_1/dbs/03veqgkg_1_1
+  List of Datafiles in backup set 3
+  File LV Type Ckp SCN    Ckp Time            Abs Fuz SCN Sparse Name
+  ---- -- ---- ---------- ------------------- ----------- ------ ----
+  1       Full 2236179    2020-11-06 04:04:45              NO    /u01/app/oracle/oradata/orcl/system01.dbf
+  3       Full 2236179    2020-11-06 04:04:45              NO    /u01/app/oracle/oradata/orcl/sysaux01.dbf
+  4       Full 2236179    2020-11-06 04:04:45              NO    /u01/app/oracle/oradata/orcl/undotbs01.dbf
+  7       Full 2236179    2020-11-06 04:04:45              NO    /u01/app/oracle/oradata/orcl/users01.dbf
+
+BS Key  Type LV Size       Device Type Elapsed Time Completion Time    
+------- ---- -- ---------- ----------- ------------ -------------------
+4       Full    10.19M     DISK        00:00:00     2020-11-06 04:07:59
+        BP Key: 4   Status: AVAILABLE  Compressed: NO  Tag: TAG20201106T040759
+        Piece Name: /u01/app/oracle/product/12.2.0/db_1/dbs/c-1577685671-20201106-01
+  SPFILE Included: Modification time: 2020-11-06 04:06:02
+  SPFILE db_unique_name: ORCL
+  Control File Included: Ckp SCN: 2236179      Ckp time: 2020-11-06 04:04:45
+
+```
+
+备份成功！我这里是经过两次备份，所以，编号时3，4，最后 使用alter database open;打开数据库!
+
+### 使用备份恢复数据库！
+
+#### 1 找到数据文件的位置！
+
+```
+SELECT NAME FROM V$DATAFILE;
+
+
+
+NAME                                                                            
+--------------------------------------------------------------------------------
+
+/u01/app/oracle/oradata/orcl/system01.dbf
+ 
+
+/u01/app/oracle/oradata/orcl/sysaux01.dbf
+ 
+
+/u01/app/oracle/oradata/orcl/undotbs01.dbf
+ 
+
+/u01/app/oracle/oradata/orcl/users01.dbf
+
+```
+
+#### 2 关闭数据库并删除所有的数据文件
+
+```
+RMAN> shutdown immediate
+
+database closed
+database dismounted
+Oracle instance shut down
+
+RMAN> exit
+Recovery Manager complete.
+[oracle@oracle ~]$ rm -rf /u01/app/oracle/oradata/orcl/system01.dbf
+[oracle@oracle ~]$ rm -rf /u01/app/oracle/oradata/orcl/sysaux01.dbf
+[oracle@oracle ~]$ rm -rf /u01/app/oracle/oradata/orcl/undotbs01.dbf
+[oracle@oracle ~]$ rm -rf /u01/app/oracle/oradata/orcl/users01.dbf
+
+```
+
+#### 3 使用RMAN启动数据库，这里也可以使用sqlplus / as sysdba启动数据库，我主要是为了方便所以用了RMAN.
+
+```
+[oracle@oracle ~]$ rman target /
+
+Recovery Manager: Release 12.2.0.1.0 - Production on Fri Nov 6 04:18:27 2020
+
+Copyright (c) 1982, 2017, Oracle and/or its affiliates.  All rights reserved.
+
+connected to target database (not started)
+
+RMAN> startup
+
+Oracle instance started
+database mounted
+RMAN-00571: ===========================================================
+RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============
+RMAN-00571: ===========================================================
+RMAN-03002: failure of startup command at 11/06/2020 04:18:39
+ORA-01157: cannot identify/lock data file 1 - see DBWR trace file
+ORA-01110: data file 1: '/u01/app/oracle/oradata/orcl/system01.dbf'
+
+```
+
+可以看到数据库无法启动，主要是因为我们刚才输出了所有的数据文件造成的。
+
+#### 4 使用备份恢复所有的数据文件，但是要先确定你的操作系统现在是mount状态。
+
+```
+RMAN> restore database;(还原数据文件)
+
+Starting restore at 2020-11-06 04:19:26
+using target database control file instead of recovery catalog
+allocated channel: ORA_DISK_1
+channel ORA_DISK_1: SID=35 device type=DISK
+
+channel ORA_DISK_1: starting datafile backup set restore
+channel ORA_DISK_1: specifying datafile(s) to restore from backup set
+channel ORA_DISK_1: restoring datafile 00001 to /u01/app/oracle/oradata/orcl/system01.dbf
+channel ORA_DISK_1: restoring datafile 00003 to /u01/app/oracle/oradata/orcl/sysaux01.dbf
+channel ORA_DISK_1: restoring datafile 00004 to /u01/app/oracle/oradata/orcl/undotbs01.dbf
+channel ORA_DISK_1: restoring datafile 00007 to /u01/app/oracle/oradata/orcl/users01.dbf
+channel ORA_DISK_1: reading from backup piece /u01/app/oracle/product/12.2.0/db_1/dbs/03veqgkg_1_1
+channel ORA_DISK_1: piece handle=/u01/app/oracle/product/12.2.0/db_1/dbs/03veqgkg_1_1 tag=TAG20201106T040744
+channel ORA_DISK_1: restored backup piece 1
+channel ORA_DISK_1: restore complete, elapsed time: 00:00:07
+Finished restore at 2020-11-06 04:19:3
+
+
+```
+
+#### 5 对数据库进行介质恢复
+
+```
+RMAN>  recover database;
+
+Starting recover at 2020-11-06 04:20:40
+using channel ORA_DISK_1
+
+starting media recovery
+
+archived log for thread 1 with sequence 1 is already on disk as file /u01/app/oracle/oradata/orcl/redo01.log
+archived log file name=/u01/app/oracle/oradata/orcl/redo01.log thread=1 sequence=1
+media recovery complete, elapsed time: 00:00:00
+Finished recover at 2020-11-06 04:20:40
+
+```
+
+#### 6 恢复完成以resetlogs;打开数据库
+
+```
+alter database open resetlogs;
+
+查看状态
+RMAN> SELECT STATUS FROM V$INSTANCE;
+
+STATUS
+------------
+OPEN
+```
+
+启动成功，恢复完成
+
+也可尝试在数据库打开的时候去试试删除数据文件！
