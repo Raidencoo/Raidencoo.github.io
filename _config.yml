@@ -4,10 +4,10 @@
 # ---------------------------------------------------------------
 
 # Site
-title: NexT
+title: 只有牙
 subtitle:
 description:
-author: John Doe
+author: Raiden
 # Support language: de, en, fr-FR, id, ja, ko, pt-BR, pt, ru, zh-Hans, zh-hk, zh-tw
 language: en
 date_format: '%Y-%m-%d'
@@ -87,7 +87,7 @@ keywords: "Jekyll, NexT"
 rss:
 
 # Specify the date when the site was setup
-#since: 2015
+since: 2020
 
 # icon between year and author @Footer
 authoricon: heart
@@ -118,7 +118,7 @@ index_with_subtitle: false
 # When running the site in a subdirectory (e.g. domain.tld/blog), remove the leading slash (/archives -> archives)
 menu:
   home: /
-  #categories: /categories/
+  categories: /categories/
   #about: /about/
   archives: /archives/
   tags: /tags/
@@ -233,7 +233,7 @@ social_icons:
 
 # Sidebar Avatar
 # in directory: /assets/images/avatar.gif
-#avatar:
+avatar: https://www.baidu.com/link?url=UALqMzzahgGF__9gcisAxcy9rHrTfreAPM0N6RDVajAQO1XSM_imBF4ktNc7z3VM2VPQgR1Vt6l0DW6AL_LND09Jiivu3GAwSyE6k0JPjG_1c15xLeKeG5fvfkiwt1CT_Qy6sml2v68PSbQ1yvyDUB1t40bDXrUetPzM7yyRuFQAkyGmTcVbwZK3iJBOhrRtddEn7LmfpQEJUVezlbFQCagmFYlzsTHnLRO3OWHGcN4MZzvPE8gdlTb5xzjrB8pt7fUZML_MUvYWCQQxzCtkK5sfWf3K2y4YdQFTWrJ45qWmvIVou3bji_ITu_2RF-ykbJGavxeClyl8UgHJcBTyA-nwT_HFEanTrWxWSISHOY1_SumasQPc5hqvsRuwR4XZ9_pDsT73v2JuNcyifwuooy6UPeK3Hr1yBCdGc46_SYtClNMOvnpz_XodPqVlY1Jul0heu-VVpEThE0kYZy2nld3oJLaAOHVTpwfbA3TUQJ9Ov5f2rFSZz2qbXC3CAK0LUbTKC2K3DavLIM_NSQoHkZQiDVzZa1FCuvbRB9jA5S3bbhs3GlhI-AZqfVDRb-IbxXBTl1RU3SWgJLmP3lo0OBx7lwB9AI_5lWyuzB-Q05obWvLl2v-RZaIUTkxEIV8OgxEtHuQgwT3woWL-27WICa&wd=&eqid=83b776940000c9a100000006612df14c
 
 
 # Table Of Contents in the Sidebar
@@ -631,7 +631,7 @@ pace: false
 pace_theme: pace-theme-minimal
 
 # Canvas-nest
-canvas_nest: false
+canvas_nest: true
 
 # three_waves
 three_waves: false
